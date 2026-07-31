@@ -13,7 +13,7 @@ def subgroup_performance(df: pd.DataFrame, y_true_col: str, y_pred_col: str,
         if group_df[y_true_col].nunique() < 2:
             # Skip groups with only one class present
             continue
-         metrics = compute_classification_metrics(
+        metrics = compute_classification_metrics(
             group_df[y_true_col], group_df[y_pred_col], group_df[y_proba_col]
         )
         rows.append({sensitive_column: group_value, "n_clients": len(group_df), **metrics})
@@ -23,17 +23,17 @@ def subgroup_performance(df: pd.DataFrame, y_true_col: str, y_pred_col: str,
 
     return pd.DataFrame(rows)
 
-def flag_disparate_subgroups(subgroup_table: pd.DataFrame, metric: str = "recall",
+def flag_disparate_subgroups(subgroup_performance_df: pd.DataFrame, metric: str = "recall",
                               tolerance: float = 0.10) -> pd.DataFrame:
     """Flag any subgroup whose chosen metric is more than `tolerance`
     below the overall value - a simple, explainable disparate-impact
     check 
     """
     
-    overall_value = subgroup_table.loc[
-        subgroup_table.iloc[:, 0] == "OVERALL", metric
+    overall_value = subgroup_performance_df.loc[
+        subgroup_performance_df.iloc[:, 0] == "OVERALL", metric
     ].iloc[0]
 
-    flagged = subgroup_table[(subgroup_table.iloc[:, 0] != "OVERALL") &(subgroup_table[metric] < overall_value - tolerance)].copy()
+    flagged = subgroup_performance_df[(subgroup_performance_df.iloc[:, 0] != "OVERALL") &(subgroup_performance_df[metric] < overall_value - tolerance)].copy()
     flagged["gap_vs_overall"] = overall_value - flagged[metric]
     return flagged  
