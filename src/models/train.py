@@ -9,6 +9,7 @@ from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 from src.models.evaluate import compute_classification_metrics
 from src.models.preprocessing import (all_model_features, high_cardinality_cols, low_cardinality_cols, numeric_cols, apply_frequency_encoders, build_preprocessor, fit_frequency_encoders)
+from src.models.stacking import train_and_evaluate_stacking
 
 
 random_state = 42
@@ -44,6 +45,8 @@ def train_and_evaluate_model(model_name: str, estimator, needs_scaling: bool, tr
     # Apply frequency encoders to both training and test data
     train_df_encoded = apply_frequency_encoders(train_df, freq_encoders)
     test_df_encoded = apply_frequency_encoders(test_df, freq_encoders)
+    stack_result = train_and_evaluate_stacking(train_df, test_df, train_df_encoded, test_df_encoded)
+    print({k: v for k, v in stack_result.items() if k != "pipeline"})
 
     # Separate features and target
     X_train = train_df_encoded[all_model_features]
@@ -73,10 +76,10 @@ def train_and_evaluate_model(model_name: str, estimator, needs_scaling: bool, tr
         mlflow.log_params({"model_name": model_name, "use_smote": use_smote, "needs_scaling": needs_scaling})
         mlflow.log_metrics(metrics)
         
-        mlflow.sklearn.log_model(pipeline, model_name, artifact_path="models", skops_trusted_types= ["xgboost.core.Booster", "xgboost.sklearn.XGBClassifier",
+        mlflow.sklearn.log_model(pipeline, name="model", skops_trusted_types= ["xgboost.core.Booster", "xgboost.sklearn.XGBClassifier",
                                                                                                      "sklearn.neural_network._stochastic_optimizers.AdamOptimizer", ])
         
-    return {"model_name": model_name, "metrics": metrics, "pipeline": pipeline}
+    return {"model_name": model_name, **metrics, "pipeline": pipeline}
 
 def run_all_models(train_df: pd.DataFrame, test_df: pd.DataFrame, use_smote: bool = False) -> pd.DataFrame:
     """
@@ -91,11 +94,11 @@ def run_all_models(train_df: pd.DataFrame, test_df: pd.DataFrame, use_smote: boo
         print(f"Training and evaluating {model_name}...")
         model_result = train_and_evaluate_model(model_name, estimator, needs_scaling, train_df, test_df, use_smote)
         result.append({k: v for k, v in model_result.items() if k != "pipeline"})  # Exclude pipeline from the summary
-        print(f'[done] {model_name} : ROC AUC = {model_result["roc_auc"]:.4f}, F1 Score = {model_result["f1_score"]:.4f} PR-AUC = {model_result["pr_auc"]:.4f}')
-    
+        print(f'[done] {model_name} : ROC AUC = {model_result["roc_auc"]:.4f}, F1 Score = {model_result["f1_score"]:.4f} PR-AUC = {model_result["average_precision"]:.4f}')
+        
     return pd.DataFrame(result)
 
-def save_serving_artifact(best_result : dict, train_df : pd.DataFrame, test_df : pd.DataFrame, artifact_path : str = "models") -> None:
+def save_serving_artifact(best_result : dict, train_df : pd.DataFrame, test_df : pd.DataFrame, output_dir: str = "models") -> None:
     """
     Save the best model pipeline and frequency encoders for serving.
     """
@@ -115,8 +118,8 @@ def save_serving_artifact(best_result : dict, train_df : pd.DataFrame, test_df :
     
     # Save the decision threshold for serving
     y_test = test_df["y"]
-    y_proba = best_result["pipeline"].predict_proba(test_df[ALL_MODEL_FEATURES])[:, 1] \
-        if all(c in test_df.columns for c in ALL_MODEL_FEATURES) else None
+    y_proba = best_result["pipeline"].predict_proba(test_df[all_model_features])[:, 1] \
+        if all(c in test_df.columns for c in all_model_features) else None
     threshold_info = find_optimal_threshold(y_test, y_proba) if y_proba is not None else {"threshold": 0.5}
     with open(f"{output_dir}/decision_threshold.txt", "w") as f:
         f.write(str(threshold_info["threshold"]))
@@ -128,7 +131,7 @@ def save_serving_artifact(best_result : dict, train_df : pd.DataFrame, test_df :
     
 
     # Save the frequency encoders for serving
-    freq_encoders = fit_frequency_encoders(train_df, HIGH_CARDINALITY_CATEGORICAL)
+    freq_encoders = fit_frequency_encoders(train_df, high_cardinality_cols)
     with open(f"{output_dir}/frequency_encoders.pkl", "wb") as f:
         pickle.dump(freq_encoders, f)
 
@@ -146,8 +149,8 @@ if __name__ == "__main__":
     raw = encode_target(load_raw_data("data/raw/bank-full.csv"))
     cleaned = clean_pipeline(raw)
 
-    train_df, temp_df = train_test_split(cleaned, test_size=0.30, stratify=cleaned["y"], random_state=RANDOM_STATE)
-    val_df, test_df = train_test_split(temp_df, test_size=0.50, stratify=temp_df["y"], random_state=RANDOM_STATE)
+    train_df, temp_df = train_test_split(cleaned, test_size=0.30, stratify=cleaned["y"], random_state=random_state)
+    val_df, test_df = train_test_split(temp_df, test_size=0.50, stratify=temp_df["y"], random_state=random_state)
 
     train_feat, others = build_features_pipeline(train_df, {"val": val_df, "test": test_df})
 
