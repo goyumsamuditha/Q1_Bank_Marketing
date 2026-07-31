@@ -1,0 +1,36 @@
+# --- Python ---
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
+venv/
+
+# --- Data (tracked by DVC, not git - see dvc.yaml) ---
+data/raw/*.csv
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
+# --- Trained model artefacts (large binaries, don't belong in git) ---
+models/*.joblib
+models/*.pkl
+mlruns/
+mlartifacts/
+
+# --- Databricks ---
+.databricks/
+
+# --- Notebooks: outputs stripped by pre-commit (nbstripout), but ignore checkpoints ---
+.ipynb_checkpoints/
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+.DS_Store
+
+# --- Secrets - never commit these ---
+.env
+*.pem

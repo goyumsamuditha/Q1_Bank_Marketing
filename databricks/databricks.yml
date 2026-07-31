@@ -1,0 +1,70 @@
+bundle:
+  name: bank-term-deposit-mlops
+
+
+targets:
+  dev:
+    mode: development
+    workspace:
+      host: https://<your-dev-workspace>.azuredatabricks.net
+  staging:
+    mode: production
+    workspace:
+      host: https://<your-staging-workspace>.azuredatabricks.net
+  prod:
+    mode: production
+    workspace:
+      host: https://<your-prod-workspace>.azuredatabricks.net
+
+resources:
+  jobs:
+    training_pipeline:
+      name: bank-term-deposit-training-pipeline
+      tasks:
+        - task_key: ingest_bronze
+          notebook_task:
+            notebook_path: ./notebooks/00_ingest_bronze.py
+
+        - task_key: clean_silver
+          depends_on:
+            - task_key: ingest_bronze
+          notebook_task:
+            notebook_path: ./notebooks/01_clean_silver.py
+
+        - task_key: build_features_gold
+          depends_on:
+            - task_key: clean_silver
+          notebook_task:
+            notebook_path: ./notebooks/02_features_gold.py
+
+        - task_key: train_and_register
+          depends_on:
+            - task_key: build_features_gold
+          notebook_task:
+            notebook_path: ./notebooks/03_train_register.py
+
+        - task_key: drift_check
+          depends_on:
+            - task_key: train_and_register
+          notebook_task:
+            notebook_path: ./notebooks/05_drift_monitor.py
+
+
+      schedule:
+        quartz_cron_expression: "0 0 2 * * ?"
+        timezone_id: "UTC"
+
+      email_notifications:
+        on_failure:
+          - mlops-alerts@yourbank.example.com
+
+    batch_scoring:
+      name: bank-term-deposit-nightly-batch-score
+      tasks:
+        - task_key: batch_score
+          notebook_task:
+            notebook_path: ./notebooks/04_batch_score.py
+
+      schedule:
+        quartz_cron_expression: "0 30 3 * * ?"
+        timezone_id: "UTC"
