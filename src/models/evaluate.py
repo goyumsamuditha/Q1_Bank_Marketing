@@ -36,7 +36,7 @@ def final_optimal_threshold(y_true, y_proba, metric: str = "f1_score", min_recal
     """
     Find the optimal threshold for classification based on a specified metric.
     """
-    thresholds = np.linespace(0.01, 0.99, 99)
+    thresholds = np.linspace(0.01, 0.99, 99)
     best = {"threshold": 0.5, "f1_score": -1}
     
     for threshold in thresholds:
