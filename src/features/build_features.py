@@ -11,9 +11,9 @@ def add_contact_recency_score(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
     
-    recency_decay = 1/(1 + df["days_since_last_contact"])
+    recency_decay = 1/(1 + df["days_since_contact"])
     
-    sucess_bonus = (df["poutcome"] == "success").astype(float)
+    success_bonus = (df["poutcome"] == "success").astype(float)
     
     base_score = 0.5 + 0.5 * success_bonus  
     
@@ -40,8 +40,17 @@ def add_age_life_stage(df: pd.DataFrame) -> pd.DataFrame:
     df["age_life_stage"] = pd.cut(df["age"], bins=age_life_stage_bins, labels=age_life_stage_labels, right=False).astype(str)   
     return df
 
-def fit_seasonal_conversion_prior(df: pd.DataFrame, month_lookup: pd.Series) -> pd.DataFrame:
-    """pply step for Feature 4: map each row's month to the training-set
+
+def fit_seasonal_conversion_prior(train_df: pd.DataFrame) -> pd.Series:
+    """
+    Fit step for Feature 4: average historical subscription rate per month,
+    computed ONLY on the training split.
+    """
+    return train_df.groupby("month")["y"].mean()
+
+
+def apply_seasonal_conversion_prior(df: pd.DataFrame, month_lookup: pd.Series) -> pd.DataFrame:
+    """Apply step for Feature 4: map each row's month to the training-set
     subscription rate for that month. Unseen months (shouldn't happen with
     12 possible months, but just in case) fall back to the overall mean.
     """
@@ -55,7 +64,7 @@ def add_is_high_season(df: pd.DataFrame) -> pd.DataFrame:
     far better (March, September, October, December).
     """
     df = df.copy()
-    df["high_season_flag"] = df["month"].isin(high_season_months).astype(int)
+    df["is_high_season"] = df["month"].isin(high_season_months).astype(int)
     return df
 
 def add_contact_channel_trust(df: pd.DataFrame) -> pd.DataFrame:
