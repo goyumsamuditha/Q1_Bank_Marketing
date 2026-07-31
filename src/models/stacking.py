@@ -24,7 +24,7 @@ def build_stacking_ensemble(scale_pos_weight: float) -> StackingClassifier:
     return StackingClassifier(
         estimators=base_models,
         final_estimator=LogisticRegression(max_iter=1000),
-        stacking_method='predict_proba',
+        stack_method='predict_proba',
         cv=5,
         n_jobs=-1
     )
