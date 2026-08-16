@@ -1,4 +1,5 @@
-RAW_CSV_PATH = "abfss://landing@<your-storage-account>.dfs.core.windows.net/bank-full.csv"
+# Databricks notebook source
+RAW_CSV_PATH = "abfss://landing@stbankmlops01.dfs.core.windows.net/bank-full.csv"
 BRONZE_TABLE = "bank_mlops.bronze.clients_raw"
 
 # COMMAND ----------

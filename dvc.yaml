@@ -1,0 +1,18 @@
+stages:
+  clean:
+    cmd: python -m src.data.clean_data
+    deps:
+      - data/raw/bank-full.csv
+      - src/data/clean_data.py
+    outs:
+      - data/interim/cleaned.parquet
+
+  build_features:
+    cmd: python -m src.features.build_features
+    deps:
+      - data/interim/cleaned.parquet
+      - src/features/build_features.py
+    outs:
+      - data/processed/train.parquet
+      - data/processed/val.parquet
+      - data/processed/test.parquet

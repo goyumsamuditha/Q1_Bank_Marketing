@@ -6,15 +6,15 @@ targets:
   dev:
     mode: development
     workspace:
-      host: https://<your-dev-workspace>.azuredatabricks.net
+      host: https://adb-7405615280576185.5.azuredatabricks.net
   staging:
     mode: production
     workspace:
-      host: https://<your-staging-workspace>.azuredatabricks.net
+      host: https://adb-7405615280576185.5.azuredatabricks.net
   prod:
     mode: production
     workspace:
-      host: https://<your-prod-workspace>.azuredatabricks.net
+      host: https://adb-7405615280576185.5.azuredatabricks.net
 
 resources:
   jobs:
