@@ -68,11 +68,10 @@ df = df.withColumn("client_index", F.monotonically_increasing_id())
 df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(GOLD_TABLE)
 print(f"Wrote Gold feature table: {GOLD_TABLE} ({df.count():,} rows)")
 
-from databricks.feature_engineering import FeatureEngineeringClient
-
-fe = FeatureEngineeringClient()
-
 try:
+    from databricks.feature_engineering import FeatureEngineeringClient
+
+    fe = FeatureEngineeringClient()
     fe.create_table(
         name=GOLD_TABLE,
         primary_keys=["client_index"],
@@ -80,5 +79,4 @@ try:
         description="Engineered client features for term-deposit subscription prediction.",
     )
 except Exception as e:
-    # table already registered from a previous run - just log and continue
-    print(f"Feature table registration skipped (likely already exists): {e}")
+    print(f"Feature Store registration skipped (not required for the core pipeline): {e}")
