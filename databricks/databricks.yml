@@ -50,14 +50,25 @@ resources:
             - task_key: build_features_gold
           notebook_task:
             notebook_path: ./notebooks/03_train_register.py
-          libraries:
-            - whl: ../dist/*.whl
+          environment_key: training_env
 
         - task_key: drift_check
           depends_on:
             - task_key: train_and_register
           notebook_task:
             notebook_path: ./notebooks/05_drift_monitor.py
+
+      environments:
+        - environment_key: training_env
+          spec:
+            environment_version: "5"
+            dependencies:
+              - ../dist/*.whl
+              - xgboost>=2.0
+              - imbalanced-learn>=0.12
+              - optuna>=3.6
+              - lime>=0.2.0.1
+              - great_expectations>=0.18
 
       schedule:
         quartz_cron_expression: "0 0 2 * * ?"
