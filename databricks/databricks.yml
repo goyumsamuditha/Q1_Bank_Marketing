@@ -1,16 +1,23 @@
 bundle:
   name: bank-term-deposit-mlops
 
+artifacts:
+  default:
+    type: whl
+    path: ..
+    build: python setup.py bdist_wheel
 
 targets:
   dev:
     mode: development
     workspace:
       host: https://adb-7405615280576185.5.azuredatabricks.net
+
   staging:
     mode: production
     workspace:
       host: https://adb-7405615280576185.5.azuredatabricks.net
+
   prod:
     mode: production
     workspace:
@@ -20,6 +27,7 @@ resources:
   jobs:
     training_pipeline:
       name: bank-term-deposit-training-pipeline
+
       tasks:
         - task_key: ingest_bronze
           notebook_task:
@@ -42,13 +50,14 @@ resources:
             - task_key: build_features_gold
           notebook_task:
             notebook_path: ./notebooks/03_train_register.py
+          libraries:
+            - whl: ../dist/*.whl
 
         - task_key: drift_check
           depends_on:
             - task_key: train_and_register
           notebook_task:
             notebook_path: ./notebooks/05_drift_monitor.py
-
 
       schedule:
         quartz_cron_expression: "0 0 2 * * ?"
@@ -60,6 +69,7 @@ resources:
 
     batch_scoring:
       name: bank-term-deposit-nightly-batch-score
+
       tasks:
         - task_key: batch_score
           notebook_task:
