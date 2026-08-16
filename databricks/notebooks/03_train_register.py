@@ -15,7 +15,7 @@ test_df = gold_pdf[gold_pdf["split"] == "test"].drop(columns=["split", "client_i
 print(f"train={len(train_df):,}  val={len(val_df):,}  test={len(test_df):,}")
 
 from src.models.train import run_all_models
-from src.models.stacking import train_and_evaluate_stack
+from src.models.stacking import train_and_evaluate_stacking
 from src.models.preprocessing import fit_frequency_encoders, apply_frequency_encoders, HIGH_CARDINALITY_CATEGORICAL
 
 mlflow.set_experiment("/Shared/bank-term-deposit-mlops/training")
