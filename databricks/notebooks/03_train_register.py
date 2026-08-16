@@ -15,7 +15,7 @@ test_df = gold_pdf[gold_pdf["split"] == "test"].drop(columns=["split", "client_i
 print(f"train={len(train_df):,}  val={len(val_df):,}  test={len(test_df):,}")
 
 from src.models.train import run_all_models
-from src.models.stacking import train_and_evaluate_stack
+from src.models.stacking import train_and_evaluate_stacking
 from src.models.preprocessing import fit_frequency_encoders, apply_frequency_encoders, HIGH_CARDINALITY_CATEGORICAL
 
 mlflow.set_experiment("/Shared/bank-term-deposit-mlops/training")
@@ -26,7 +26,7 @@ display(comparison)
 freq_encoders = fit_frequency_encoders(train_df, HIGH_CARDINALITY_CATEGORICAL)
 train_enc = apply_frequency_encoders(train_df, freq_encoders)
 test_enc = apply_frequency_encoders(test_df, freq_encoders)
-stack_result = train_and_evaluate_stack(train_df, test_df, train_enc, test_enc)
+stack_result = train_and_evaluate_stacking(train_df, test_df, train_enc, test_enc)
 print(f"stacked_ensemble: ROC-AUC={stack_result['roc_auc']:.3f}  PR-AUC={stack_result['pr_auc']:.3f}")
 
 
