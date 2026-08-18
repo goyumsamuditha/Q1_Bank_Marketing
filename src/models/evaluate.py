@@ -13,7 +13,7 @@ def compute_classification_metrics(y_true, y_pred, y_proba) -> dict:
         "recall": recall_score(y_true, y_pred, zero_division=0),
         "f1_score": f1_score(y_true, y_pred, zero_division=0),
         "roc_auc": roc_auc_score(y_true, y_proba),
-        "average_precision": average_precision_score(y_true, y_proba)
+        "pr_auc": average_precision_score(y_true, y_proba)
     }
     
     return metrics

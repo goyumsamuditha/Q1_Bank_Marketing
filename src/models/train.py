@@ -76,9 +76,7 @@ def train_and_evaluate_model(model_name: str, estimator, needs_scaling: bool, tr
         mlflow.log_params({"model_name": model_name, "use_smote": use_smote, "needs_scaling": needs_scaling})
         mlflow.log_metrics(metrics)
         
-        mlflow.sklearn.log_model(pipeline, name="model", skops_trusted_types= ["xgboost.core.Booster", "xgboost.sklearn.XGBClassifier",
-                                                                                                     "sklearn.neural_network._stochastic_optimizers.AdamOptimizer", ])
-        
+        mlflow.sklearn.log_model(pipeline, name="model")
     return {"model_name": model_name, **metrics, "pipeline": pipeline}
 
 def run_all_models(train_df: pd.DataFrame, test_df: pd.DataFrame, use_smote: bool = False) -> pd.DataFrame:
@@ -94,7 +92,7 @@ def run_all_models(train_df: pd.DataFrame, test_df: pd.DataFrame, use_smote: boo
         print(f"Training and evaluating {model_name}...")
         model_result = train_and_evaluate_model(model_name, estimator, needs_scaling, train_df, test_df, use_smote)
         result.append({k: v for k, v in model_result.items() if k != "pipeline"})  # Exclude pipeline from the summary
-        print(f'[done] {model_name} : ROC AUC = {model_result["roc_auc"]:.4f}, F1 Score = {model_result["f1_score"]:.4f} PR-AUC = {model_result["average_precision"]:.4f}')
+        print(f'[done] {model_name} : ROC AUC = {model_result["roc_auc"]:.4f}, F1 Score = {model_result["f1_score"]:.4f} PR-AUC = {model_result["pr_auc"]:.4f}')
         
     return pd.DataFrame(result)
 
@@ -107,7 +105,7 @@ def save_serving_artifact(best_result : dict, train_df : pd.DataFrame, test_df :
 
     import joblib
 
-    from src.models.evaluate import find_optimal_threshold
+    from src.models.evaluate import final_optimal_threshold
     from src.features.build_features import fit_seasonal_conversion_prior
     # Save the best model pipeline and frequency encoders for serving
     Path(output_dir).mkdir(exist_ok=True)
@@ -120,7 +118,7 @@ def save_serving_artifact(best_result : dict, train_df : pd.DataFrame, test_df :
     y_test = test_df["y"]
     y_proba = best_result["pipeline"].predict_proba(test_df[all_model_features])[:, 1] \
         if all(c in test_df.columns for c in all_model_features) else None
-    threshold_info = find_optimal_threshold(y_test, y_proba) if y_proba is not None else {"threshold": 0.5}
+    threshold_info = final_optimal_threshold(y_test, y_proba) if y_proba is not None else {"threshold": 0.5}
     with open(f"{output_dir}/decision_threshold.txt", "w") as f:
         f.write(str(threshold_info["threshold"]))
         

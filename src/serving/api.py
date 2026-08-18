@@ -9,6 +9,9 @@ from fastapi import FastAPI, HTTPException
 from src.serving.inference import predict_single, prepare_single_record
 from src.serving.schema import ClientPredictionRequest, ClientPredictionResponse
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 MODEL_PATH = os.environ.get("MODEL_PATH", "models/final_pipeline.joblib")
 THRESHOLD_PATH = os.environ.get("THRESHOLD_PATH", "models/decision_threshold.txt")
 SEASONAL_LOOKUP_PATH = os.environ.get("SEASONAL_LOOKUP_PATH", "models/seasonal_conversion_prior.csv")
@@ -58,3 +61,9 @@ def predict(request: ClientPredictionRequest) -> ClientPredictionResponse:
     prepared_row = prepare_single_record(request.model_dump(), _seasonal_lookup, _frequency_encoders)
     result = predict_single(_model, prepared_row, _threshold)
     return ClientPredictionResponse(**result)
+
+app.mount("/static", StaticFiles(directory="src/serving/static"), name="static")
+
+@app.get("/")
+def serve_ui():
+    return FileResponse("src/serving/static/index.html")

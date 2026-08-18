@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Term Deposit Desk — Call Scoring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #12203A;
+    --ink-soft: #5B6B85;
+    --paper: #F1F0EC;
+    --card: #FBFAF7;
+    --line: #D7D3C6;
+    --emerald: #0B6E4F;
+    --emerald-soft: #E4F1EA;
+    --rust: #A8432F;
+    --rust-soft: #F5E7E2;
+    --gold: #B8863B;
+  }
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) { * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    background: var(--ink);
+    color: #EDEFF4;
+    padding: 22px 28px;
+  }
+  header .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #8FA0C2;
+    margin: 0 0 6px 0;
+  }
+  header h1 {
+    font-family: 'IBM Plex Serif', serif;
+    font-weight: 600;
+    font-size: 24px;
+    margin: 0;
+    letter-spacing: 0.01em;
+  }
+
+  main {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 820px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+
+  /* ---- Left: the ledger form ---- */
+  .ledger-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 18px 22px 12px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ledger-head h2 {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+  }
+  .ledger-head span {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--gold);
+    padding: 16px 22px 2px;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .field {
+    padding: 10px 22px;
+    border-right: 1px solid var(--line);
+  }
+  .field:last-child { border-right: none; }
+  .field.full { grid-column: 1 / -1; border-right: none; }
+
+  .field label {
+    display: block;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    margin-bottom: 3px;
+  }
+  .field input, .field select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14.5px;
+    color: var(--ink);
+    padding: 2px 0;
+  }
+  .field input:focus, .field select:focus {
+    outline: none;
+    border-bottom: 2px solid var(--emerald);
+    margin-bottom: -2px;
+  }
+  .field select { cursor: pointer; }
+
+  .submit-row { padding: 18px 22px; }
+  button#submitBtn {
+    width: 100%;
+    padding: 13px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  button#submitBtn:hover { background: #1c3358; }
+  button#submitBtn:disabled { background: #98A2B3; cursor: wait; }
+
+  /* ---- Right: verdict panel ---- */
+  .verdict-panel {
+    padding: 22px;
+    position: sticky;
+    top: 24px;
+  }
+  .verdict-panel .section-label { padding-left: 0; padding-top: 0; }
+
+  .prob-figure {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    font-size: 52px;
+    line-height: 1;
+    margin: 10px 0 4px;
+    color: var(--ink);
+  }
+  .prob-figure .unit { font-size: 22px; color: var(--ink-soft); }
+  .prob-caption { font-size: 12.5px; color: var(--ink-soft); margin-bottom: 16px; }
+
+  .meter-track {
+    position: relative;
+    height: 8px;
+    background: var(--line);
+    border-radius: 4px;
+    margin: 6px 0 22px;
+  }
+  .meter-fill {
+    height: 100%;
+    background: var(--ink-soft);
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.5s cubic-bezier(.2,.8,.2,1);
+  }
+  .meter-fill.emerald { background: var(--emerald); }
+  .meter-fill.rust { background: var(--rust); }
+  .threshold-tick {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 16px;
+    background: var(--gold);
+    left: 0%;
+  }
+  .threshold-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--gold);
+    margin-top: -14px;
+    display: block;
+  }
+
+  /* the stamp */
+  .stamp-wrap { min-height: 128px; display: flex; align-items: center; justify-content: center; margin-top: 8px; }
+  .stamp {
+    display: none;
+    font-family: 'IBM Plex Serif', serif;
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 14px 22px;
+    border: 3px double currentColor;
+    border-radius: 6px;
+    transform: rotate(-6deg);
+    text-align: center;
+  }
+  .stamp.show {
+    display: block;
+    animation: stampDown 0.28s cubic-bezier(.2,.9,.3,1.3);
+  }
+  .stamp.call { color: var(--emerald); background: var(--emerald-soft); }
+  .stamp.hold { color: var(--rust); background: var(--rust-soft); }
+  .stamp small { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.08em; margin-top: 4px; font-weight: 500; }
+
+  @keyframes stampDown {
+    0% { opacity: 0; transform: rotate(-6deg) scale(1.6); }
+    70% { opacity: 1; transform: rotate(-6deg) scale(0.94); }
+    100% { opacity: 1; transform: rotate(-6deg) scale(1); }
+  }
+
+  .placeholder-note {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    text-align: center;
+    padding: 30px 10px;
+    border: 1px dashed var(--line);
+    border-radius: 4px;
+  }
+
+  .error-note {
+    font-size: 12.5px;
+    color: var(--rust);
+    background: var(--rust-soft);
+    border: 1px solid var(--rust);
+    border-radius: 4px;
+    padding: 10px 14px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">bank_mlops · term deposit desk</p>
+  <h1>Call Scoring Ledger</h1>
+</header>
+
+<main>
+  <form id="predictForm" class="card">
+    <div class="ledger-head">
+      <h2>Client entry</h2>
+      <span>enter details, then score</span>
+    </div>
+
+    <p class="section-label">Profile</p>
+    <div class="row">
+      <div class="field"><label>Age</label><input type="number" name="age" value="42" min="18" max="100" required /></div>
+      <div class="field">
+        <label>Job</label>
+        <select name="job">
+          <option>management</option><option>technician</option><option>blue-collar</option>
+          <option>admin.</option><option>services</option><option>retired</option>
+          <option>student</option><option>unemployed</option><option>self-employed</option>
+          <option>entrepreneur</option><option>housemaid</option><option>unknown</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Marital status</label><select name="marital"><option>married</option><option>single</option><option>divorced</option></select></div>
+      <div class="field"><label>Education</label><select name="education"><option>secondary</option><option>tertiary</option><option>primary</option><option>unknown</option></select></div>
+    </div>
+
+    <p class="section-label">Finances</p>
+    <div class="row">
+      <div class="field"><label>Avg. yearly balance (£)</label><input type="number" name="balance" value="1500" required /></div>
+      <div class="field"><label>Credit in default?</label><select name="default"><option>no</option><option>yes</option></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Housing loan?</label><select name="housing"><option>yes</option><option>no</option></select></div>
+      <div class="field"><label>Personal loan?</label><select name="loan"><option>no</option><option>yes</option></select></div>
+    </div>
+
+    <p class="section-label">Contact history</p>
+    <div class="row">
+      <div class="field"><label>Contact channel</label><select name="contact"><option>cellular</option><option>telephone</option><option>unknown</option></select></div>
+      <div class="field"><label>Day of month</label><input type="number" name="day" value="15" min="1" max="31" required /></div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Month</label>
+        <select name="month">
+          <option>jan</option><option>feb</option><option>mar</option><option>apr</option>
+          <option selected>may</option><option>jun</option><option>jul</option><option>aug</option>
+          <option>sep</option><option>oct</option><option>nov</option><option>dec</option>
+        </select>
+      </div>
+      <div class="field"><label>Contacts this campaign</label><input type="number" name="campaign" value="2" min="1" required /></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Days since last contact (-1 = never)</label><input type="number" name="pdays" value="-1" required /></div>
+      <div class="field"><label>Contacts before this campaign</label><input type="number" name="previous" value="0" min="0" required /></div>
+    </div>
+    <div class="row">
+      <div class="field full"><label>Previous campaign outcome</label><select name="poutcome"><option>unknown</option><option>success</option><option>failure</option><option>other</option></select></div>
+    </div>
+
+    <div class="submit-row">
+      <button type="submit" id="submitBtn">Score this client</button>
+    </div>
+  </form>
+
+  <div class="verdict-panel card">
+    <p class="section-label">Verdict</p>
+
+    <div id="beforeScore" class="placeholder-note">Enter a client's details and press <strong>Score this client</strong> to see the model's call.</div>
+
+    <div id="afterScore" style="display:none;">
+      <div class="prob-figure"><span id="probNumber">0</span><span class="unit">%</span></div>
+      <p class="prob-caption">estimated probability of subscribing</p>
+
+      <div class="meter-track">
+        <div class="threshold-tick" id="thresholdTick"></div>
+        <div class="meter-fill" id="meterFill"></div>
+      </div>
+      <span class="threshold-label" id="thresholdLabel">threshold —%</span>
+
+      <div class="stamp-wrap">
+        <div class="stamp" id="stamp"></div>
+      </div>
+    </div>
+
+    <div id="errorNote" class="error-note"></div>
+  </div>
+</main>
+
+<script>
+const form = document.getElementById('predictForm');
+const submitBtn = document.getElementById('submitBtn');
+const beforeScore = document.getElementById('beforeScore');
+const afterScore = document.getElementById('afterScore');
+const errorNote = document.getElementById('errorNote');
+const stamp = document.getElementById('stamp');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errorNote.style.display = 'none';
+  stamp.classList.remove('show', 'call', 'hold');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Scoring…';
+
+  const formData = new FormData(form);
+  const payload = {};
+  const numericFields = ['age', 'balance', 'day', 'campaign', 'pdays', 'previous'];
+  for (const [key, value] of formData.entries()) {
+    payload[key] = numericFields.includes(key) ? Number(value) : value;
+  }
+
+  try {
+    const response = await fetch('/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Score this client';
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      errorNote.textContent = errBody.detail ? JSON.stringify(errBody.detail) : `Server returned status ${response.status}`;
+      errorNote.style.display = 'block';
+      return;
+    }
+
+    const data = await response.json();
+    const probPct = data.subscription_probability * 100;
+    const threshPct = data.decision_threshold_used * 100;
+    const isCall = data.predicted_label === 'yes';
+
+    beforeScore.style.display = 'none';
+    afterScore.style.display = 'block';
+
+    document.getElementById('probNumber').textContent = probPct.toFixed(1);
+    document.getElementById('thresholdLabel').textContent = `threshold ${threshPct.toFixed(0)}%`;
+    document.getElementById('thresholdTick').style.left = `${threshPct}%`;
+
+    const fill = document.getElementById('meterFill');
+    fill.style.width = `${probPct}%`;
+    fill.className = 'meter-fill ' + (isCall ? 'emerald' : 'rust');
+
+    stamp.className = 'stamp show ' + (isCall ? 'call' : 'hold');
+    stamp.innerHTML = isCall
+      ? `Call<small>${probPct.toFixed(0)}% likely</small>`
+      : `Do not call<small>${probPct.toFixed(0)}% likely</small>`;
+
+  } catch (err) {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Score this client';
+    errorNote.textContent = 'Could not reach the API — ' + err.message;
+    errorNote.style.display = 'block';
+  }
+});
+</script>
+
+</body>
+</html>
