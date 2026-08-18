@@ -4,11 +4,11 @@ from sklearn.model_selection import train_test_split
 from src.data.clean_data import clean_pipeline
 from src.data.load_data import encode_target, load_raw_data
 from src.features.build_features import build_features_pipeline
-from src.models.evaluate import find_optimal_threshold
-from src.models.preprocessing import ALL_MODEL_FEATURES
-from src.models.stacking import train_and_evaluate_stack
-from src.models.train import run_all_models, save_serving_artifacts, fit_frequency_encoders
-from src.models.preprocessing import HIGH_CARDINALITY_CATEGORICAL, apply_frequency_encoders
+from src.models.evaluate import final_optimal_threshold
+from src.models.preprocessing import all_model_features
+from src.models.stacking import train_and_evaluate_stacking
+from src.models.train import run_all_models, save_serving_artifact, fit_frequency_encoders
+from src.models.preprocessing import high_cardinality_cols, apply_frequency_encoders
 
 RANDOM_STATE = 42
 RAW_DATA_PATH = "data/raw/bank-full.csv"
@@ -37,10 +37,10 @@ def main() -> None:
     print(comparison.to_string(index=False))
 
     print("Step 5/6: training the stacked ensemble (A+ extra 6th model)...")
-    freq_encoders = fit_frequency_encoders(train_feat, HIGH_CARDINALITY_CATEGORICAL)
+    freq_encoders = fit_frequency_encoders(train_feat, high_cardinality_cols)
     train_enc = apply_frequency_encoders(train_feat, freq_encoders)
     test_enc = apply_frequency_encoders(others["test"], freq_encoders)
-    stack_result = train_and_evaluate_stack(train_feat, others["test"], train_enc, test_enc)
+    stack_result = train_and_evaluate_stacking(train_feat, others["test"], train_enc, test_enc)
     print(f"  -> stacked_ensemble: ROC-AUC={stack_result['roc_auc']:.3f} PR-AUC={stack_result['pr_auc']:.3f}")
 
     print("Step 6/6: saving serving artefacts for the best model...")
@@ -54,15 +54,15 @@ def main() -> None:
     if best_name == "stacked_ensemble":
         best_pipeline_result = stack_result
     else:
-        from src.models.train import get_base_models, train_and_log_model
+        from src.models.train import get_base_model, train_and_evaluate_model
         n_pos = (train_feat["y"] == 1).sum()
         n_neg = (train_feat["y"] == 0).sum()
-        estimator, needs_scaling = get_base_models(n_neg / n_pos)[best_name]
-        best_pipeline_result = train_and_log_model(
+        estimator, needs_scaling = get_base_model(n_neg / n_pos)[best_name]
+        best_pipeline_result = train_and_evaluate_model(
             best_name, estimator, needs_scaling, train_feat, others["test"]
         )
 
-    save_serving_artifacts(best_pipeline_result, train_feat, others["test"])
+    save_serving_artifact(best_pipeline_result, train_feat, others["test"])
     print("\nDone. Run `uvicorn src.serving.api:app --reload` to serve predictions locally.")
 
 
